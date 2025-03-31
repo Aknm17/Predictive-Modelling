@@ -1,0 +1,249 @@
+---
+title: "562 Coursework 1"
+author: '36851079'
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+library(tidyverse)
+
+# Load the dataset
+train_data <- read.csv("LogiTude_train.csv")
+test_data <- read.csv("LogiTude_test.csv")    
+
+
+```
+```{r}
+
+# Inspect structure and summary statistics
+glimpse(train_data)  # this gives overview of data types
+
+
+```
+
+```{r}
+summary(train_data)  # Summary statistics of the dataset
+```
+
+
+```{r}
+
+# Converting categorical variables to factors
+train_data <- train_data %>%
+  mutate(across(c(churn, gender, millenial, clanmembership, avatar, 
+                  internet_connect, extrapro_account, contract_length, 
+                  customer_support, payment_type), as.factor))
+```
+```{r}
+# Standardizing levels for 'internet_connect' (if needed)
+train_data$internet_connect <- recode(train_data$internet_connect, 
+                                      "DSL_16MB/S" = "DSL 16")
+
+# Standardizing levels for 'payment_type' (if needed)
+train_data$payment_type <- recode(train_data$payment_type, 
+                                  "PrePaid" = "Pre-paid")
+
+# Checking for remaining inconsistencies
+summary(train_data)
+
+```
+```{r}
+
+# Checking for missing values
+missing_values <- colSums(is.na(train_data))
+print(missing_values)
+
+```
+
+```{r}
+# Loading necessary libraries for visualization
+library(ggplot2)
+library(dplyr)
+
+```
+
+```{r}
+# Bar plot for categorical variables (e.g., churn)
+#ggplot(train_data, aes(x = churn)) +
+ # geom_bar(fill = "steelblue") +
+  #labs(title = "Class Distribution of Churn", x = "Churn", y = "Count")
+```
+
+```{r}
+# Load custom functions
+source("Rfunctions.R")  
+
+# Bar plot of churn (class distribution)
+barp(train_data, "churn")
+
+# Conditional probability barplot (here it is churn given contract_length)
+cc_barplot(train_data, "contract_length", "churn", freq = "condprob")
+
+# Simple histogram
+hist(train_data$monthly_bill, breaks = 30, col="red", main="Monthly Bill Distribution", xlab="Monthly Bill")
+
+# Conditional histogram (monthly_bill given churn)
+cc_hist(train_data, "monthly_bill", "churn")
+
+# Simple boxplot of monthly_bill
+boxplot(train_data$monthly_bill, col = "blue", notch = TRUE, main="Boxplot of Monthly Bill")
+
+# Class conditional boxplot (monthly_bill given churn)
+cc_boxplot(train_data, "monthly_bill", "churn")
+```
+
+
+
+
+
+```{r}
+# Check the column names of the dataset
+colnames(train_data)
+
+```
+```{r}
+train_data$churn <- ifelse(tolower(train_data$churn) == "yes", 1, 0)
+table(train_data$churn)
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+#install.packages("Information")  # Run this if not installed
+library(Information)
+
+IV <- create_infotables(data = train_data, y = "churn", bins = 5)
+IV$Summary
+
+```
+```{r}
+library(ggplot2)
+
+ggplot(train_data, aes(x = contract_length, fill = factor(churn))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("steelblue", "firebrick"), labels = c("Stayed", "Churned")) +
+  labs(title = "Churn Rate by Contract Length",
+       x = "Contract Length",
+       y = "Proportion of Customers",
+       fill = "Churn Status") +
+  theme_minimal()
+
+
+ggplot(train_data, aes(x = factor(churn), y = monthly_bill, fill = factor(churn))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("steelblue", "firebrick"), labels = c("Stayed", "Churned")) +
+  labs(title = "Monthly Bill Distribution by Churn Status",
+       x = "Churn Status",
+       y = "Monthly Bill") +
+  theme_minimal()
+
+
+ggplot(train_data, aes(x = internet_connect, fill = factor(churn))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("steelblue", "firebrick"), labels = c("Stayed", "Churned")) +
+  labs(title = "Churn Rate by Internet Connection Type",
+       x = "Internet Connection Type",
+       y = "Proportion of Customers",
+       fill = "Churn Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+ggplot(train_data, aes(x = payment_type, fill = factor(churn))) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("steelblue", "firebrick"), labels = c("Stayed", "Churned")) +
+  labs(title = "Churn Rate by Payment Type",
+       x = "Payment Type",
+       y = "Proportion of Customers",
+       fill = "Churn Status") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+```{r}
+library(ggcorrplot)
+
+# Compute the correlation matrix
+cor_matrix <- cor(train_data %>% select_if(is.numeric)) 
+
+# Plot the correlation matrix using ggcorrplot
+ggcorrplot(cor_matrix, method = "square", type = "lower",
+           lab = TRUE, lab_size = 3, colors = c("red", "white", "blue"),
+           title = "Correlation Heatmap", ggtheme = theme_minimal())
+```
+```{r}
+library(ggplot2)
+
+ggplot(train_data, aes(x = platformsince, y = churn)) +
+  geom_jitter(width = 0.1, height = 0.05, alpha = 0.5, color = "blue") + 
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  labs(title = "Scatter Plot: Platform Tenure vs. Churn",
+       x = "Platform Tenure (Months/Years)",
+       y = "Churn (1 = Yes, 0 = No)") +
+  theme_minimal()
+
+
+```
+
+```{r}
+
+# Chi-square test between churn and payment_type
+chi_sq_payment <- chisq.test(table(train_data$churn, train_data$payment_type))
+
+# Display the result
+chi_sq_payment
+
+
+```
+```{r}
+# Chi-square test between churn and platformsince
+chi_sq_payment <- chisq.test(table(train_data$churn, train_data$platformsince))
+
+# Display the result
+chi_sq_payment
+```
+```{r}
+chi_sq_contract <- chisq.test(table(train_data$churn, train_data$internet_connect))
+
+# Display the result
+chi_sq_contract
+
+```
+
+
+```{r}
+# Chi-square test between churn and contract_length
+chi_sq_contract <- chisq.test(table(train_data$churn, train_data$contract_length))
+
+# Display the result
+chi_sq_contract
+
+
+```
+
+```{r}
+# Perform t-test to compare monthly_bill between churn (yes vs no)
+t_test_churn <- t.test(monthly_bill ~ churn, data = train_data)
+
+# Display the result
+t_test_churn
+
+```
+
+
+
+
